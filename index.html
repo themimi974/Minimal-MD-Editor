@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Minimal MD Editor</title>
+  <style>
+    body {
+      margin: 0; padding: 0;
+      font-family: sans-serif;
+      background: #181818; color: #ccc;
+      display: flex; flex-direction: column;
+      height: 100vh;
+    }
+    header, footer {
+      background: #2b2b2b; padding: 0.5rem 1rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    header h1 { margin: 0; font-size: 16px; color: #eee; }
+    #toolbar { margin-left: auto; }
+    button, label {
+      background: #3c3c3c;
+      border: 1px solid #444;
+      color: #ddd;
+      padding: 0.3rem 0.6rem;
+      cursor: pointer;
+      margin-right: 0.2rem;
+    }
+    button:hover, label:hover {
+      background: #555;
+    }
+    input[type="file"] { display: none; }
+    input#filename {
+      width: 120px; padding: 0.3rem;
+      background: #222; border: 1px solid #444; color: #ddd;
+    }
+    main {
+      flex: 1; display: flex; overflow: hidden;
+    }
+    #editor, #preview {
+      flex: 1;
+      padding: 1rem;
+      overflow: auto;
+      display: none; /* Initially hidden */
+    }
+    #editor {
+      display: flex;
+      flex-direction: column;
+    }
+    #editor textarea {
+      flex: 1; resize: none; border: none; outline: none;
+      background: #1f1f1f; color: #ddd;
+      padding: 0.5rem;
+      font-family: monospace; font-size: 14px; line-height: 1.4;
+    }
+    pre, code { background: #222; }
+    h1, h2, h3 { color: #ccc; }
+
+    /* Visible section styles */
+    .visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Markdown Editor</h1>
+
+  <!-- Toggle between editor or preview mode -->
+  <button id="toggleView">View: Editor</button>
+
+  <span id="toolbar">
+    <label for="fileInput">Load File</label>
+    <input type="file" id="fileInput" accept=".md,.txt">
+  </span>
+</header>
+
+<main>
+  <!-- Raw text input (default visible) -->
+  <div id="editor" class="visible">
+    <textarea id="textInput" 
+      placeholder="Type your markdown or plain text here..."></textarea>
+  </div>
+
+  <!-- Preview area (hidden by default) -->
+  <div id="preview"></div>
+</main>
+
+<footer>
+  <input type="text" id="filename" placeholder="Enter filename" />
+  <button id="saveBtn">Save Markdown</button>
+</footer>
+
+<!-- Marked library minified (inline or from CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+  const textInput  = document.getElementById('textInput');
+  const preview    = document.getElementById('preview');
+  const toggleBtn  = document.getElementById('toggleView');
+  const fileInput  = document.getElementById('fileInput');
+  const saveBtn    = document.getElementById('saveBtn');
+  const filenameEl = document.getElementById('filename');
+
+  let showEditor = true; // toggles between editor and preview
+
+  // Update preview
+  function updatePreview() {
+    if (!showEditor) {
+      const raw = textInput.value;
+      preview.innerHTML = marked.parse(raw);
+    }
+  }
+
+  // Toggle view
+  toggleBtn.onclick = () => {
+    showEditor = !showEditor;
+    toggleBtn.textContent = showEditor ? 'View: Editor' : 'View: Preview';
+
+    if (showEditor) {
+      document.getElementById('editor').style.display = 'flex';
+      document.getElementById('preview').style.display = 'none';
+    } else {
+      document.getElementById('editor').style.display = 'none';
+      document.getElementById('preview').style.display = 'block';
+      updatePreview();
+    }
+  };
+
+  // Listen to changes in text -> update preview
+  textInput.addEventListener('input', updatePreview);
+
+  // Load file
+  fileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      textInput.value = ev.target.result;
+      updatePreview();
+    };
+    reader.readAsText(file);
+  };
+
+  // Save file
+  saveBtn.onclick = () => {
+    const blob = new Blob([textInput.value], { type: 'text/markdown' });
+    const name = filenameEl.value.trim() || 'untitled.md';
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Keyboard shortcuts for inserting Markdown
+  textInput.addEventListener('keydown', (e) => {
+    const ctrl = e.ctrlKey || e.metaKey; // allow Mac CMD
+    if (ctrl && e.key === 'b') {
+      e.preventDefault();
+      wrapSelection('**');
+    } else if (ctrl && e.key === 'i') {
+      e.preventDefault();
+      wrapSelection('*');
+    } else if (ctrl && e.key.toLowerCase() === 'l') {
+      e.preventDefault();
+      insertLink();
+    } else if (ctrl && e.altKey && e.key === 'h') {
+      e.preventDefault();
+      wrapSelection('\n```\n','\n```\n');
+    }
+  });
+
+  function wrapSelection(marker, endMarker=marker) {
+    const { selectionStart, selectionEnd, value } = textInput;
+    const selectedText = value.slice(selectionStart, selectionEnd);
+    const newText = marker + selectedText + endMarker;
+    textInput.setRangeText(newText, selectionStart, selectionEnd, 'end');
+    updatePreview();
+  }
+
+  function insertLink() {
+    const linkFormat = '[title](http://example.com)';
+    const { selectionStart } = textInput;
+    textInput.setRangeText(linkFormat, selectionStart, selectionStart, 'end');
+    updatePreview();
+  }
+</script>
+</body>
+</html>
