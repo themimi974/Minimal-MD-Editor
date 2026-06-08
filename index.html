@@ -1,99 +1,461 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <title>Minimal MD Editor</title>
+  <title>MD Editor V2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ── CSS Variables ── */
+    :root {
+      --transition: 0.22s ease;
+    }
+
+    [data-theme="dark"] {
+      --bg:          #141414;
+      --bg-mid:      #1c1c1c;
+      --bg-surface:  #242424;
+      --bg-hover:    #2e2e2e;
+      --border:      #333;
+      --border-soft: #2a2a2a;
+      --text:        #d4d4d4;
+      --text-dim:    #888;
+      --text-bright: #f0f0f0;
+      --accent:      #5b8aff;
+      --accent-dim:  #2c3d66;
+      --code-bg:     #1a1a2e;
+      --code-border: #2e3a5a;
+      --table-head:  #1e2235;
+      --table-row:   #1a1a1a;
+      --table-alt:   #1e1e1e;
+      --table-border:#2e2e3e;
+      --shadow:      0 2px 12px rgba(0,0,0,0.5);
+    }
+
+    [data-theme="light"] {
+      --bg:          #f5f5f0;
+      --bg-mid:      #eeeee8;
+      --bg-surface:  #ffffff;
+      --bg-hover:    #e4e4de;
+      --border:      #d0d0c8;
+      --border-soft: #e0e0d8;
+      --text:        #2a2a2a;
+      --text-dim:    #777;
+      --text-bright: #111;
+      --accent:      #3060e8;
+      --accent-dim:  #d0d8f8;
+      --code-bg:     #f0f2ff;
+      --code-border: #c8d0ee;
+      --table-head:  #e8ecff;
+      --table-row:   #ffffff;
+      --table-alt:   #f8f8f4;
+      --table-border:#d0d4e8;
+      --shadow:      0 2px 12px rgba(0,0,0,0.1);
+    }
+
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      margin: 0; padding: 0;
-      font-family: sans-serif;
-      background: #181818; color: #ccc;
-      display: flex; flex-direction: column;
-      height: 100vh;
-    }
-    header, footer {
-      background: #2b2b2b; padding: 0.5rem 1rem;
-      display: flex; align-items: center; gap: 1rem;
-    }
-    header h1 { margin: 0; font-size: 16px; color: #eee; }
-    #toolbar { margin-left: auto; }
-    button, label {
-      background: #3c3c3c;
-      border: 1px solid #444;
-      color: #ddd;
-      padding: 0.3rem 0.6rem;
-      cursor: pointer;
-      margin-right: 0.2rem;
-    }
-    button:hover, label:hover {
-      background: #555;
-    }
-    input[type="file"] { display: none; }
-    input#filename {
-      width: 120px; padding: 0.3rem;
-      background: #222; border: 1px solid #444; color: #ddd;
-    }
-    main {
-      flex: 1; display: flex; overflow: hidden;
-    }
-    #editor, #preview {
-      flex: 1;
-      padding: 1rem;
-      overflow: auto;
-      display: none; /* Initially hidden */
-    }
-    #editor {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
       display: flex;
       flex-direction: column;
+      height: 100vh;
+      transition: background var(--transition), color var(--transition);
     }
-    #editor textarea {
-      flex: 1; resize: none; border: none; outline: none;
-      background: #1f1f1f; color: #ddd;
-      padding: 0.5rem;
-      font-family: monospace; font-size: 14px; line-height: 1.4;
-    }
-    pre, code { background: #222; }
-    h1, h2, h3 { color: #ccc; }
 
-    /* Visible section styles */
-    .visible {
-      display: block;
+    /* ── Header ── */
+    header {
+      background: var(--bg-mid);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1rem;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+      box-shadow: var(--shadow);
+      z-index: 10;
     }
+
+    header h1 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-bright);
+      white-space: nowrap;
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.3rem 0.7rem;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background var(--transition), border-color var(--transition), color var(--transition);
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent);
+      color: var(--text-bright);
+    }
+    .btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Dark Mode Toggle ── */
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+    .theme-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .toggle-track {
+      width: 38px;
+      height: 20px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition);
+    }
+    [data-theme="dark"] .toggle-track {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+    }
+    .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      transition: transform var(--transition), background var(--transition);
+    }
+    [data-theme="dark"] .toggle-thumb {
+      transform: translateX(18px);
+      background: var(--accent);
+    }
+
+    /* ── Main Layout ── */
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Editor Pane ── */
+    #editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #textInput {
+      flex: 1;
+      resize: none;
+      border: none;
+      outline: none;
+      background: var(--bg);
+      color: var(--text);
+      padding: 1.25rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.5px;
+      line-height: 1.7;
+      transition: background var(--transition), color var(--transition);
+      tab-size: 2;
+    }
+    #textInput::placeholder {
+      color: var(--text-dim);
+    }
+
+    /* ── Preview Pane ── */
+    #previewWrap {
+      display: none;
+      flex: 1;
+      overflow: auto;
+      background: var(--bg-surface);
+      transition: background var(--transition);
+    }
+    #previewWrap.pane-visible {
+      display: flex !important;
+      justify-content: center;
+    }
+    #preview {
+      padding: 2rem 2.5rem;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    /* ── Pane is shown ── */
+    .pane-visible { display: block !important; }
+    #editor.pane-visible { display: flex !important; }
+
+    /* ── Preview Typography ── */
+    #preview {
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--text);
+    }
+    #preview h1, #preview h2, #preview h3,
+    #preview h4, #preview h5, #preview h6 {
+      color: var(--text-bright);
+      font-weight: 700;
+      margin: 1.5em 0 0.5em;
+      line-height: 1.25;
+    }
+    #preview h1 { font-size: 2em; border-bottom: 2px solid var(--accent); padding-bottom: 0.3em; }
+    #preview h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+    #preview h3 { font-size: 1.2em; }
+    #preview p  { margin: 0.75em 0; }
+    #preview a  { color: var(--accent); text-decoration: none; }
+    #preview a:hover { text-decoration: underline; }
+    #preview ul, #preview ol { margin: 0.5em 0; padding-left: 1.6em; }
+    #preview li { margin: 0.3em 0; }
+    #preview blockquote {
+      border-left: 3px solid var(--accent);
+      margin: 1em 0;
+      padding: 0.5em 1em;
+      background: var(--bg-mid);
+      color: var(--text-dim);
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ── Improved Code Blocks ── */
+    #preview pre {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 6px;
+      margin: 1em 0;
+      overflow-x: auto;
+      position: relative;
+    }
+    #preview pre::before {
+      content: attr(data-lang);
+      position: absolute;
+      top: 0;
+      right: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--code-border);
+      padding: 2px 8px;
+      border-bottom-left-radius: 4px;
+      border-top-right-radius: 5px;
+    }
+    #preview pre code {
+      display: block;
+      padding: 1rem 1.1rem;
+      padding-top: 1.4rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+      background: none;
+      border: none;
+      border-radius: 0;
+      white-space: pre;
+    }
+    #preview :not(pre) > code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      color: var(--accent);
+      padding: 0.15em 0.45em;
+      border-radius: 3px;
+    }
+
+    /* ── Improved Tables ── */
+    #preview table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.25em 0;
+      font-size: 14px;
+      border: 1px solid var(--table-border);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+    }
+    #preview thead {
+      background: var(--table-head);
+    }
+    #preview thead th {
+      padding: 0.65em 1em;
+      text-align: left;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border-bottom: 2px solid var(--table-border);
+      white-space: nowrap;
+    }
+    #preview tbody tr {
+      background: var(--table-row);
+      transition: background 0.12s;
+    }
+    #preview tbody tr:nth-child(even) {
+      background: var(--table-alt);
+    }
+    #preview tbody tr:hover {
+      background: var(--bg-hover);
+    }
+    #preview tbody td {
+      padding: 0.6em 1em;
+      border-bottom: 1px solid var(--table-border);
+      vertical-align: middle;
+    }
+    #preview tbody tr:last-child td {
+      border-bottom: none;
+    }
+    #preview thead th:not(:last-child),
+    #preview tbody td:not(:last-child) {
+      border-right: 1px solid var(--table-border);
+    }
+
+    /* ── Horizontal Rule ── */
+    #preview hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.5em 0;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--bg-mid);
+      border-top: 1px solid var(--border);
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    #filename {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      width: 160px;
+      padding: 0.3rem 0.6rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      outline: none;
+      transition: border-color var(--transition), background var(--transition);
+    }
+    #filename:focus { border-color: var(--accent); }
+    #filename::placeholder { color: var(--text-dim); }
+
+    .footer-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    #wordCount {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── File input hidden ── */
+    input[type="file"] { display: none; }
+
+    /* ── Scrollbar styling ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Markdown Editor</h1>
+  <h1>MD <span>Editor</span> <span style="color:var(--text-dim);font-weight:400">v2</span></h1>
 
-  <!-- Toggle between editor or preview mode -->
-  <button id="toggleView">View: Editor</button>
+  <div class="header-divider"></div>
 
-  <span id="toolbar">
-    <label for="fileInput">Load File</label>
-    <input type="file" id="fileInput" accept=".md,.txt">
+  <button class="btn" id="toggleView">Editor</button>
+
+  <label class="btn" for="fileInput">Load File</label>
+  <input type="file" id="fileInput" accept=".md,.txt">
+
+  <div class="header-divider"></div>
+
+  <!-- Keyboard shortcut hints -->
+  <span style="font-size:11px;color:var(--text-dim);letter-spacing:0.03em">
+    <kbd style="background:var(--bg-surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:JetBrains Mono,monospace">Ctrl+B</kbd> bold &nbsp;
+    <kbd style="background:var(--bg-surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:JetBrains Mono,monospace">Ctrl+I</kbd> italic &nbsp;
+    <kbd style="background:var(--bg-surface);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:JetBrains Mono,monospace">Ctrl+L</kbd> link
   </span>
+
+  <!-- Dark Mode Toggle -->
+  <div class="theme-toggle">
+    <span class="theme-label" id="themeLabel">Dark</span>
+    <div class="toggle-track" id="themeToggle" title="Toggle light/dark mode">
+      <div class="toggle-thumb"></div>
+    </div>
+  </div>
 </header>
 
 <main>
-  <!-- Raw text input (default visible) -->
-  <div id="editor" class="visible">
-    <textarea id="textInput" 
-      placeholder="Type your markdown or plain text here..."></textarea>
+  <div id="editor">
+    <textarea id="textInput" placeholder="Start writing markdown...&#10;&#10;# Heading&#10;**bold**, *italic*, `code`&#10;&#10;| Col A | Col B |&#10;|-------|-------|&#10;| cell  | cell  |&#10;&#10;```py&#10;print('hello')&#10;```"></textarea>
   </div>
 
-  <!-- Preview area (hidden by default) -->
-  <div id="preview"></div>
+  <div id="previewWrap">
+    <div id="preview"></div>
+  </div>
 </main>
 
 <footer>
-  <input type="text" id="filename" placeholder="Enter filename" />
-  <button id="saveBtn">Save Markdown</button>
+  <input type="text" id="filename" placeholder="filename.md" />
+  <div class="footer-right">
+    <span id="wordCount">0 words</span>
+    <div class="header-divider"></div>
+    <button class="btn" id="saveBtn">↓ Save</button>
+  </div>
 </footer>
 
-<!-- Marked library minified (inline or from CDN) -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
 <script>
   const textInput  = document.getElementById('textInput');
   const preview    = document.getElementById('preview');
@@ -101,37 +463,73 @@
   const fileInput  = document.getElementById('fileInput');
   const saveBtn    = document.getElementById('saveBtn');
   const filenameEl = document.getElementById('filename');
+  const themeToggle = document.getElementById('themeToggle');
+  const themeLabel  = document.getElementById('themeLabel');
+  const wordCount   = document.getElementById('wordCount');
 
-  let showEditor = true; // toggles between editor and preview
+  let showEditor = true;
 
-  // Update preview
+  // ── Theme Toggle ──
+  themeToggle.addEventListener('click', () => {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    themeLabel.textContent = isDark ? 'Light' : 'Dark';
+  });
+
+  // ── Marked config: detect language on fenced code blocks ──
+  // Newer marked (v5+) passes a token object; older versions pass (code, lang) separately.
+  const renderer = new marked.Renderer();
+  renderer.code = function(codeOrToken, lang) {
+    const rawCode = typeof codeOrToken === 'object' ? (codeOrToken.text ?? '') : (codeOrToken ?? '');
+    const rawLang = typeof codeOrToken === 'object' ? (codeOrToken.lang ?? '') : (lang ?? '');
+    const escaped = String(rawCode)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const langAttr = rawLang ? ` data-lang="${rawLang}"` : '';
+    return `<pre${langAttr}><code>${escaped}</code></pre>`;
+  };
+  marked.setOptions({ renderer, breaks: true, gfm: true });
+
+  // ── Update Preview ──
   function updatePreview() {
-    if (!showEditor) {
-      const raw = textInput.value;
-      preview.innerHTML = marked.parse(raw);
-    }
+    preview.innerHTML = marked.parse(textInput.value);
+    updateWordCount();
   }
 
-  // Toggle view
-  toggleBtn.onclick = () => {
+  // ── Word Count ──
+  function updateWordCount() {
+    const text = textInput.value.trim();
+    const words = text ? text.split(/\s+/).length : 0;
+    wordCount.textContent = `${words} word${words !== 1 ? 's' : ''}`;
+  }
+
+  // ── Toggle Editor / Preview ──
+  const editorEl    = document.getElementById('editor');
+  const previewWrapEl = document.getElementById('previewWrap');
+
+  function applyView() {
+    editorEl.style.display      = showEditor ? 'flex' : 'none';
+    previewWrapEl.style.display = showEditor ? 'none' : 'flex';
+    toggleBtn.textContent = showEditor ? 'Editor' : 'Preview';
+    toggleBtn.classList.toggle('active', !showEditor);
+    if (!showEditor) updatePreview();
+  }
+
+  toggleBtn.addEventListener('click', () => {
     showEditor = !showEditor;
-    toggleBtn.textContent = showEditor ? 'View: Editor' : 'View: Preview';
+    applyView();
+  });
 
-    if (showEditor) {
-      document.getElementById('editor').style.display = 'flex';
-      document.getElementById('preview').style.display = 'none';
-    } else {
-      document.getElementById('editor').style.display = 'none';
-      document.getElementById('preview').style.display = 'block';
-      updatePreview();
-    }
-  };
+  // init
+  applyView();
 
-  // Listen to changes in text -> update preview
+  // ── Live input ──
   textInput.addEventListener('input', updatePreview);
 
-  // Load file
-  fileInput.onchange = (e) => {
+  // ── Load File ──
+  fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -140,52 +538,53 @@
       updatePreview();
     };
     reader.readAsText(file);
-  };
+  });
 
-  // Save file
-  saveBtn.onclick = () => {
+  // ── Save File ──
+  saveBtn.addEventListener('click', () => {
     const blob = new Blob([textInput.value], { type: 'text/markdown' });
-    const name = filenameEl.value.trim() || 'untitled.md';
+    let name = filenameEl.value.trim() || 'untitled';
+    if (!name.endsWith('.md')) name += '.md';
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = name;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  });
 
-  // Keyboard shortcuts for inserting Markdown
+  // ── Keyboard Shortcuts ──
   textInput.addEventListener('keydown', (e) => {
-    const ctrl = e.ctrlKey || e.metaKey; // allow Mac CMD
-    if (ctrl && e.key === 'b') {
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (ctrl && e.key === 'b') { e.preventDefault(); wrapSelection('**'); }
+    else if (ctrl && e.key === 'i') { e.preventDefault(); wrapSelection('*'); }
+    else if (ctrl && e.key.toLowerCase() === 'l') { e.preventDefault(); insertLink(); }
+    else if (ctrl && e.altKey && e.key === 'h') { e.preventDefault(); wrapSelection('\n```\n', '\n```\n'); }
+    // Tab → 2 spaces
+    else if (e.key === 'Tab') {
       e.preventDefault();
-      wrapSelection('**');
-    } else if (ctrl && e.key === 'i') {
-      e.preventDefault();
-      wrapSelection('*');
-    } else if (ctrl && e.key.toLowerCase() === 'l') {
-      e.preventDefault();
-      insertLink();
-    } else if (ctrl && e.altKey && e.key === 'h') {
-      e.preventDefault();
-      wrapSelection('\n```\n','\n```\n');
+      const { selectionStart } = textInput;
+      textInput.setRangeText('  ', selectionStart, selectionStart, 'end');
     }
   });
 
-  function wrapSelection(marker, endMarker=marker) {
+  function wrapSelection(marker, endMarker = marker) {
     const { selectionStart, selectionEnd, value } = textInput;
-    const selectedText = value.slice(selectionStart, selectionEnd);
-    const newText = marker + selectedText + endMarker;
-    textInput.setRangeText(newText, selectionStart, selectionEnd, 'end');
+    const selected = value.slice(selectionStart, selectionEnd);
+    textInput.setRangeText(marker + selected + endMarker, selectionStart, selectionEnd, 'end');
     updatePreview();
   }
 
   function insertLink() {
-    const linkFormat = '[title](http://example.com)';
-    const { selectionStart } = textInput;
-    textInput.setRangeText(linkFormat, selectionStart, selectionStart, 'end');
+    const { selectionStart, selectionEnd, value } = textInput;
+    const selected = value.slice(selectionStart, selectionEnd) || 'title';
+    const link = `[${selected}](https://example.com)`;
+    textInput.setRangeText(link, selectionStart, selectionEnd, 'end');
     updatePreview();
   }
+
+  // ── Init word count ──
+  updateWordCount();
 </script>
 </body>
 </html>
